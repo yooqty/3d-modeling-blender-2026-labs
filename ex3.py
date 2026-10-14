@@ -1,108 +1,79 @@
-import numpy as np
+```import numpy as np
+import sympy as sp
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# ==========================================
-# 1. Ввод матрицы смежности (Задание 3)
-# ==========================================
-# Матрица из задания:
-# ( 1 1 1 )
-# ( 1 1 1 )
-# ( 1 0 1 )
+# Включаем красивый вывод символов
+sp.init_printing(use_unicode=True)
 
-A = np.array([
+# ==========================================
+# 1. ВВОД МАТРИЦЫ СМЕЖНОСТИ
+# ==========================================
+adj_matrix = np.array([
     [1, 1, 1],
     [1, 1, 1],
     [1, 0, 1]
 ], dtype=int)
 
-print("1. Исходная матрица смежности (A):")
-print(A)
+print("1. Матрица смежности:")
+print(adj_matrix)
 print("-" * 30)
 
 # ==========================================
-# 2. Вывод рисунка графа
+# 2. РИСУНОК ГРАФА (с петлями)
 # ==========================================
-print("2. Построение рисунка графа...")
-
-# Создаем НЕориентированный граф (так как матрица симметрична)
 G = nx.Graph()
 
-# Добавляем узлы (0, 1, 2)
-G.add_nodes_from(range(3))
+# Добавляем ребра (включая петли, если элемент на диагонали = 1)
+rows, cols = adj_matrix.shape
+for i in range(rows):
+    for j in range(i, cols): # Проходим по верхнему треугольнику + диагональ
+        if adj_matrix[i, j] == 1:
+            G.add_edge(i+1, j+1)
 
-# Добавляем ребра на основе матрицы смежности
-# Проходим по верхнему треугольнику, чтобы не дублировать ребра
-rows, cols = np.where(np.triu(A) == 1)
-for u, v in zip(rows, cols):
-    G.add_edge(u, v)
+pos = nx.circular_layout(G)
 
-# Задаем позиции узлов (треугольником)
-pos = {
-    0: (0, 1),    # Верхний узел
-    1: (-1, -1),  # Левый нижний
-    2: (1, -1)    # Правый нижний
-}
+plt.figure(figsize=(6, 6))
+# Рисуем вершины
+nx.draw_networkx_nodes(G, pos, node_size=700, node_color='lightgreen', edgecolors='black')
+# Рисуем обычные ребра (без петель)
+edges_no_loops = [(u, v) for u, v in G.edges() if u != v]
+nx.draw_networkx_edges(G, pos, edgelist=edges_no_loops, width=2, edge_color='gray')
+# Рисуем петли (рисуем их как маленькие дуги)
+loops = [(u, v) for u, v in G.edges() if u == v]
+for u, v in loops:
+    # Рисуем петлю вручную, так как networkx не всегда делает это красиво
+    circle = plt.Circle((pos[u][0], pos[u][1]), 0.1, color='gray', fill=False, linewidth=2)
+    plt.gca().add_patch(circle)
 
-plt.figure(figsize=(6, 5))
-# Рисуем узлы
-nx.draw_networkx_nodes(G, pos, node_size=700, node_color='lightgreen')
-# Рисуем подписи узлов
-nx.draw_networkx_labels(G, pos, font_size=14, font_weight='bold')
-# Рисуем ребра (без стрелок, так как граф неориентированный)
-nx.draw_networkx_edges(G, pos, width=1.5, edge_color='gray')
+nx.draw_networkx_labels(G, pos, font_size=16, font_weight='bold')
 
-plt.title("Визуализация графа (Задание 3)")
+plt.title("Граф с петлями (Задание 3)")
 plt.axis('off')
 plt.show()
 
+# ==========================================
+# 3. СПЕКТР МАТРИЦЫ (ТОЧНЫЙ РАСЧЕТ)
+# ==========================================
+print("2. Спектр матрицы смежности (собственные значения):")
+
+M_sym = sp.Matrix(adj_matrix)
+# Получаем собственные значения точно
+eigen_dict = M_sym.eigenvals()
+
+# Выводим красиво
+unique_eigenvalues = list(eigen_dict.keys())
+
+for i, val in enumerate(unique_eigenvalues):
+    # Упрощаем выражение
+    simplified_val = sp.simplify(val)
+    # Выводим в формате lambda_i = значение
+    sp.pprint(sp.Eq(sp.Symbol(f'lambda_{i+1}'), simplified_val))
+
+print("\nИли в виде множества:")
+sp.pprint(sp.FiniteSet(*unique_eigenvalues))
 print("-" * 30)
 
 # ==========================================
-# 3. Спектр графа (Собственные значения и векторы)
-# ==========================================
-print("3. Спектр графа (Собственные значения и векторы):")
-
-# Используем np.linalg.eig() для получения собственных значений и векторов
-eigenvalues, eigenvectors = np.linalg.eig(A)
-
-# Сортируем собственные значения по убыванию (для удобства)
-idx = np.argsort(eigenvalues)[::-1]
-eigenvalues = eigenvalues[idx]
-eigenvectors = eigenvectors[:, idx]
-
-for i in range(len(eigenvalues)):
-    val = eigenvalues[i]
-    vec = eigenvectors[:, i]
-    # Округляем для красивого вывода
-    val_rounded = np.round(val.real, 4)
-    vec_rounded = np.round(vec.real, 4)
-    
-    print(f"Собственное значение λ_{i+1} = {val_rounded}")
-    print(f"Собственный вектор v_{i+1} = {vec_rounded}")
-    print()
-
-print("-" * 30)
-
-# ==========================================
-# 4. Вывод уравнения для тетради
-# ==========================================
-print("4. Характеристическое уравнение для записи в тетрадь:")
-# Найдем коэффициенты полинома
-coeffs = np.poly(A)
-# coeffs: [1, -c2, c1, -c0] для lambda^3 + ...
-eq_str = f"λ^3 + ({coeffs[1]:.1f})λ^2 + ({coeffs[2]:.1f})λ + ({coeffs[3]:.1f}) = 0"
-print(eq_str)
-print("-" * 30)
-
-# ==========================================
-# Дополнительно: Пояснение для тетради
-# ==========================================
-print("Пояснение для записи в тетрадь:")
-print("1. Матрица смежности A имеет вид:")
-print(A)
-print("2. Характеристическое уравнение: det(A - λI) = 0")
-print("3. Раскрывая определитель, получаем уравнение:")
-print("   λ^3 - 3λ^2 + λ = 0  =>  λ(λ^2 - 3λ + 1) = 0")
-print("4. Корни уравнения (спектр): λ1 = 0, λ2 ≈ 0.382, λ3 ≈ 2.618")
-print("   (Проверка: сумма корней 0 + 0.382 + 2.618 = 3, след матрицы 1+1+1 = 3. Верно!)")
+# 4. ОПРЕДЕЛИТЕЛЬ (для проверки)
+# ==================================
