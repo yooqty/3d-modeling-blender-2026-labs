@@ -1,147 +1,93 @@
 import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
 import sympy as sp
+import matplotlib.pyplot as plt
+import networkx as nx
 
-# ============================================================
-# 1. Ввод графа с помощью матрицы смежности
-# ============================================================
+# --- матрица РОВНО как введена ---
 A = np.array([
     [1, 1, 1],
     [1, 1, 1],
-    [1, 0, 1]
-])
+    [1, 0, 1],
+], dtype=float)
 
-print("="*60)
-print("1. МАТРИЦА СМЕЖНОСТИ A:")
-print("="*60)
+print("Матрица смежности A (как введена, с петлями, несимметричная):")
 print(A)
+print("Несимметрична:", not np.allclose(A, A.T))
 
-# ============================================================
-# 2. Вывод спектра графа и рисунка (обозначение ребер)
-# ============================================================
-print("\n" + "="*60)
-print("1. СПЕКТР ГРАФА (ребра):")
-print("="*60)
+# --- обозначение рёбер ---
+edges = [(i+1, j+1) for i in range(3) for j in range(3) if A[i, j]]
+loops = [(i+1, i+1) for i in range(3) if A[i, i]]
+arcs  = [e for e in edges if e[0] != e[1]]
+print("\nПетли:", loops)
+print("Дуги:  ", arcs)
 
-G = nx.from_numpy_array(A)
-edges = list(G.edges())
-print(f"Ребра графа: {edges}")
-print("Петли (вершина соединена сама с собой):", list(nx.selfloop_edges(G)))
+# --- 1. спектр графа (собственные значения A) ---
+mu = np.linalg.eigvals(A)
+print("\nСпектр графа Spec(A):")
+for v in mu:
+    print(f"  {v:.6f}")
 
-# Рисуем граф
-pos = {0: (0, 1), 1: (-1, -1), 2: (1, -1)}
-plt.figure(figsize=(6, 6))
-nx.draw(G, pos, 
-        with_labels=[1, 2, 3], 
-        node_color='lightblue', 
-        node_size=1000, 
-        font_weight='bold', 
-        edge_color='gray', 
-        width=2)
-plt.title("Спектр графа из Задания 3")
+# --- рисунок орграфа с петлями ---
+G = nx.DiGraph()
+G.add_nodes_from([1, 2, 3])
+G.add_edges_from(edges)
+pos = {1: (0, 1), 2: (1, 1), 3: (0.5, 0)}
+
+plt.figure(figsize=(5, 4))
+nx.draw(G, pos, with_labels=True, node_color='lightblue',
+        node_size=900, font_size=14, width=1.5,
+        arrows=True, arrowsize=18, connectionstyle='arc3,rad=0.15')
+for i in range(3):
+    if A[i, i] != 0:
+        x, y = pos[i+1]
+        plt.text(x + 0.12, y + 0.12, f"петля {i+1}", fontsize=9, color='green')
+plt.title("Орграф с петлями (как введено)")
+plt.axis('equal')
 plt.show()
 
-# ============================================================
-# 3. Уравнение для расчета собственных значений
-# ============================================================
-print("\n" + "="*60)
-print("2. УРАВНЕНИЕ ДЛЯ РАСЧЕТА СОБСТВЕННЫХ ЗНАЧЕНИЙ:")
-print("="*60)
-
-degrees = np.sum(A, axis=1)
-D = np.diag(degrees)
-L = D - A
-
-print("Матрица степеней D:")
-print(D)
-print("\nМатрица Кирхгофа L = D - A:")
+# --- 2. матрица Кирхгофа и уравнение ---
+deg_out = A.sum(axis=1)
+L = np.diag(deg_out) - A
+print("\nИсходящие степени:", deg_out)
+print("Матрица Кирхгофа L = D_out - A (несимметричная):")
 print(L)
 
 lam = sp.symbols('lambda')
-L_sym = sp.Matrix(L)
-I = sp.eye(3)
-char_matrix = L_sym - lam * I
-equation = char_matrix.det()
+char_poly = sp.expand(sp.Matrix(L).charpoly(lam).as_expr())
+print("\nУравнение det(L - lambda*I) = 0:")
+print(char_poly, "= 0")
+print("Факторизация:", sp.factor(char_poly), "= 0")
 
-print("\nХарактеристическая матрица (L - λI):")
-sp.pprint(char_matrix)
-print("\nУравнение det(L - λI) = 0:")
-sp.pprint(sp.Eq(equation, 0))
+# --- 3. собственные значения и «вектор Фидлера» ---
+eigvals, eigvecs = np.linalg.eig(L)
+order = np.argsort(np.abs(eigvals))
+eigvals_sorted = eigvals[order]
+eigvecs_sorted = eigvecs[:, order]
 
-# ============================================================
-# 4. Собственные значения и вектор Фидлера
-# ============================================================
-print("\n" + "="*60)
-print("3. СОБСТВЕННЫЕ ЗНАЧЕНИЯ И ВЕКТОР ФИДЛЕРА:")
-print("="*60)
+print("\nСобственные значения L (несимметричная, с петлями):")
+for i, v in enumerate(eigvals_sorted):
+    print(f"  lambda_{i} = {v:.6f}")
 
-# Используем eigh для симметричных матриц
-eigenvalues, eigenvectors = np.linalg.eigh(L)
+idx_fiedler = 1
+fiedler = np.real(eigvecs_sorted[:, idx_fiedler])
+if fiedler[0] < 0:
+    fiedler = -fiedler
+print(f"\n«Вектор Фидлера» для lambda = {eigvals_sorted[idx_fiedler]:.6f}:")
+print(np.round(fiedler, 6))
+print("ВНИМАНИЕ: для несимметричной L классический вектор Фидлера не определён;")
+print("это собственный вектор для второго по модулю собственного значения.")
 
-# Сортируем
-idx = np.argsort(eigenvalues)
-eigenvalues = eigenvalues[idx]
-eigenvectors = eigenvectors[:, idx]
-
-print("Собственные значения (отсортированы):")
-print(np.round(eigenvalues, 4))
-
-# Вектор Фидлера — второй собственный вектор (индекс 1)
-fiedler_vector = eigenvectors[:, 1]
-
-# Нормализуем для удобства
-non_zero_vals = np.abs(fiedler_vector[np.abs(fiedler_vector) > 1e-5])
-if len(non_zero_vals) > 0:
-    min_val = np.min(non_zero_vals)
-    fiedler_norm = fiedler_vector / min_val
-    if fiedler_norm[0] < 0:
-        fiedler_norm = -fiedler_norm
-else:
-    fiedler_norm = fiedler_vector
-
-fiedler_norm = np.round(fiedler_norm, 4)
-
-# >>> ИЗМЕНЕНИЕ: Принудительно делаем два одинаковых числа с разными знаками <<<
-# Ищем два одинаковых числа по модулю и меняем знак у второго
-found = False
-for i in range(len(fiedler_norm)):
-    for j in range(i + 1, len(fiedler_norm)):
-        # Если числа равны по модулю, но имеют одинаковый знак
-        if abs(fiedler_norm[i]) == abs(fiedler_norm[j]) and np.sign(fiedler_norm[i]) == np.sign(fiedler_norm[j]):
-            fiedler_norm[j] = -fiedler_norm[j]
-            found = True
-            break
-    if found:
-        break
-
-# Если вдруг не нашлось (например, вектор был [1, 0.5, -0.5]), 
-# то принудительно сделаем первую пару разных чисел противоположными
-if not found:
-    # Ищем любые два ненулевых числа и делаем их разного знака
-    indices = np.where(fiedler_norm != 0)[0]
-    if len(indices) >= 2:
-        fiedler_norm[indices[1]] = -abs(fiedler_norm[indices[1]])
-        fiedler_norm[indices[0]] = abs(fiedler_norm[indices[0]])
-
-print("\nВектор Фидлера (соответствует λ2):")
-print(fiedler_norm)
-
-# ============================================================
-# 5. Разбиение на кластеры
-# ============================================================
-print("\n" + "="*60)
-print("4. РАЗБИЕНИЕ НА КЛАСТЕРЫ:")
-print("="*60)
-
-cluster1 = []
-cluster2 = []
-for i, val in enumerate(fiedler_norm):
-    if val >= 0:
-        cluster1.append(i+1) 
-    else:
-        cluster2.append(i+1)
-
-print(f"Вектор Фидлера: {fiedler_norm}")
-print(f"Кластер 1 (>=0): Вершины {cluster1}")
-print(f"Кластер 2 (<0):  Вершины {cluster2}")
+# --- рисунок с вектором ---
+fiedler_dict = {i+1: fiedler[i] for i in range(3)}
+plt.figure(figsize=(5, 4))
+nx.draw(G, pos, with_labels=True, node_color='lightblue',
+        node_size=900, font_size=14, width=1.5,
+        arrows=True, arrowsize=18, connectionstyle='arc3,rad=0.15')
+for node, (x, y) in pos.items():
+    plt.text(x, y - 0.15, f"{fiedler_dict[node]:.2f}",
+             ha='center', fontsize=11, color='darkred')
+colors = ['red' if fiedler_dict[n] > 0 else 'blue' for n in G.nodes()]
+nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=900, alpha=0.6)
+plt.title("«Вектор Фидлера» для несимметричной L")
+plt.axis('equal')
+plt.show()
