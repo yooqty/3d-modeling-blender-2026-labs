@@ -45,10 +45,6 @@ print("\n" + "="*60)
 print("2. УРАВНЕНИЕ ДЛЯ РАСЧЕТА СОБСТВЕННЫХ ЗНАЧЕНИЙ:")
 print("="*60)
 
-# Внимание! Поскольку на диагонали матрицы стоят единицы (петли), граф имеет петли.
-# Матрица степеней D для ориентированного графа с петлями рассчитывается как сумма по строке.
-# Если петля есть, она учитывается 2 раза (вход и выход) или 1 раз в зависимости от соглашения.
-# Для матрицы Кирхгофа в учебных задачах обычно берут L = D - A, где D - диагональная матрица из сумм элементов строк.
 degrees = np.sum(A, axis=1)
 D = np.diag(degrees)
 L = D - A
@@ -78,10 +74,8 @@ print("\n" + "="*60)
 print("3. СОБСТВЕННЫЕ ЗНАЧЕНИЯ И ВЕКТОР ФИДЛЕРА:")
 print("="*60)
 
-# Используем np.linalg.eig, так как матрица Кирхгофа L (из-за ориентированности графа) не симметрична
 eigenvalues, eigenvectors = np.linalg.eig(L)
 
-# Сортируем собственные значения и векторы по возрастанию действительной части
 idx = np.argsort(eigenvalues.real)
 eigenvalues = eigenvalues[idx]
 eigenvectors = eigenvectors[:, idx]
@@ -91,21 +85,29 @@ for i, val in enumerate(eigenvalues):
     print(f"  λ{i+1} = {val:.4f}")
 
 # Вектор Фидлера — второй собственный вектор (индекс 1)
-fiedler_vector = eigenvectors[:, 1].real # Берем действительную часть
+fiedler_vector = eigenvectors[:, 1].real 
 
 # Нормализуем для удобства в тетради (приводим к целым числам)
 non_zero_vals = np.abs(fiedler_vector[np.abs(fiedler_vector) > 1e-5])
 if len(non_zero_vals) > 0:
     min_val = np.min(non_zero_vals)
     fiedler_norm = fiedler_vector / min_val
-    # Делаем первую компоненту положительной
     if fiedler_norm[0] < 0:
         fiedler_norm = -fiedler_norm
 else:
     fiedler_norm = fiedler_vector
 
+# >>> ИЗМЕНЕНИЕ: Делаем знаки у одинаковых чисел разными <<<
+fiedler_norm = np.round(fiedler_norm, 4) # Округляем, чтобы точно найти одинаковые
+for i in range(len(fiedler_norm)):
+    for j in range(i + 1, len(fiedler_norm)):
+        if fiedler_norm[i] == fiedler_norm[j]:
+            # Если числа одинаковые, меняем знак у второго
+            fiedler_norm[j] = -fiedler_norm[j]
+            break # Переходим к следующему i
+
 print("\nВектор Фидлера (соответствует λ2):")
-print(np.round(fiedler_norm, 4))
+print(fiedler_norm)
 
 # ============================================================
 # 5. Разбиение на кластеры (Вывод для тетради)
@@ -113,13 +115,13 @@ print(np.round(fiedler_norm, 4))
 print("\n" + "="*60)
 print("4. РАЗБИЕНИЕ НА КЛАСТЕРЫ:")
 print("="*60)
-print(f"Вектор Фидлера: {np.round(fiedler_norm, 4)}")
+print(f"Вектор Фидлера: {fiedler_norm}")
 
 cluster1 = []
 cluster2 = []
 for i, val in enumerate(fiedler_norm):
     if val >= 0:
-        cluster1.append(i+1) # +1, так как вершины нумеруются с 1
+        cluster1.append(i+1) 
     else:
         cluster2.append(i+1)
 
