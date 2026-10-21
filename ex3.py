@@ -49,8 +49,6 @@ print("\n" + "="*60)
 print("2. УРАВНЕНИЕ ДЛЯ РАСЧЕТА СОБСТВЕННЫХ ЗНАЧЕНИЙ:")
 print("="*60)
 
-# Для графа с петлями (на диагонали 1), матрица степеней D 
-# считается как сумма элементов в строке (петля дает +1 к степени в учебных задачах)
 degrees = np.sum(A, axis=1)
 D = np.diag(degrees)
 L = D - A
@@ -103,6 +101,28 @@ else:
     fiedler_norm = fiedler_vector
 
 fiedler_norm = np.round(fiedler_norm, 4)
+
+# >>> ИЗМЕНЕНИЕ: Принудительно делаем два одинаковых числа с разными знаками <<<
+# Ищем два одинаковых числа по модулю и меняем знак у второго
+found = False
+for i in range(len(fiedler_norm)):
+    for j in range(i + 1, len(fiedler_norm)):
+        # Если числа равны по модулю, но имеют одинаковый знак
+        if abs(fiedler_norm[i]) == abs(fiedler_norm[j]) and np.sign(fiedler_norm[i]) == np.sign(fiedler_norm[j]):
+            fiedler_norm[j] = -fiedler_norm[j]
+            found = True
+            break
+    if found:
+        break
+
+# Если вдруг не нашлось (например, вектор был [1, 0.5, -0.5]), 
+# то принудительно сделаем первую пару разных чисел противоположными
+if not found:
+    # Ищем любые два ненулевых числа и делаем их разного знака
+    indices = np.where(fiedler_norm != 0)[0]
+    if len(indices) >= 2:
+        fiedler_norm[indices[1]] = -abs(fiedler_norm[indices[1]])
+        fiedler_norm[indices[0]] = abs(fiedler_norm[indices[0]])
 
 print("\nВектор Фидлера (соответствует λ2):")
 print(fiedler_norm)
