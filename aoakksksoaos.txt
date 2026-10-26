@@ -1,0 +1,12 @@
+104.16.55.40 СДОХ
+
+Теперь вот так в хостс и заработает (UPD: теория подтвердилась, оно работает в принципе)
+
+C:\Windows\System32\drivers\etc\hosts
+
+104.16.206.131 auth.riotgames.com
+104.16.206.131 account.riotgames.com
+104.18.157.37 clientconfig.rpg.riotgames.com
+104.16.56.21 data.riotgames.com
+104.16.56.21 entitlements.auth.riotgames.com
+104.16.206.131 sieve.services.riotcdn.net
