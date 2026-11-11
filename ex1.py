@@ -1,91 +1,122 @@
-import numpy as np
-import sympy as sp
 import networkx as nx
 import matplotlib.pyplot as plt
+from collections import deque
 
 # ==========================================
-# 0. ВИЗУАЛИЗАЦИЯ ГРАФА (Исправленная)
+# 1. ВВОД ГРАФА (Матрица смежности / расстояний)
 # ==========================================
+# Вершины графа: S, A, B, C, D, E, F, G
+nodes = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G']
+
+# Веса ребер по рис.1:
+# S-A: 1, S-B: 2, S-C: 3
+# A-D: 4, B-E: 5
+# D-G: 7
+# Остальные ребра (без цифр) принимаем за 1.
+# (C-F, F-G, E-G, D-G - здесь G-D уже 7, остальные по 1)
+
+edges = [
+    ('S', 'A', 1), ('S', 'B', 2), ('S', 'C', 3),
+    ('A', 'D', 4), ('B', 'E', 5),
+    ('C', 'F', 1), ('F', 'G', 1),
+    ('E', 'G', 1), ('D', 'G', 7)
+]
+
+# Создаем граф
 G = nx.Graph()
-# Правильные ребра по картинке: 1-2, 1-3, 2-3, 3-4
-edges = [(1, 2), (1, 3), (2, 3), (3, 4)]
-G.add_edges_from(edges)
-
-# Позиции для ромба
-pos = {
-    1: (0, 1),    # верх
-    2: (-1, 0),   # лево
-    3: (1, 0),    # право
-    4: (0, -1)    # низ
-}
-
-plt.figure(figsize=(5, 5))
-nx.draw(G, pos, 
-        with_labels=True, 
-        node_color='red', 
-        node_size=800, 
-        font_color='white', 
-        font_weight='bold',
-        edge_color='gray',
-        width=2)
-plt.title("Исправленный граф из задания")
-plt.show()
+G.add_nodes_from(nodes)
+G.add_weighted_edges_from(edges)
 
 # ==========================================
-# 1. Ввод графа с помощью матрицы смежности
+# 2. ВЫВОД РИСУНКА ГРАФА
 # ==========================================
-# Узлы: 1, 2, 3, 4
-# 1: связи с 2, 3
-# 2: связи с 1, 3
-# 3: связи с 1, 2, 4
-# 4: связь с 3
-A = np.array([
-    [0, 1, 1, 0],  # 1
-    [1, 0, 1, 0],  # 2
-    [1, 1, 0, 1],  # 3
-    [0, 0, 1, 0]   # 4
-])
-
-print("Матрица смежности A:")
-print(A)
-print("-" * 30)
-
-# ==========================================
-# 2. Матрица Кирхгофа (L = D - A)
-# ==========================================
-degrees = np.sum(A, axis=1)
-D = np.diag(degrees)
-L = D - A
-
-print("Матрица Кирхгофа L:")
-print(L)
-print("-" * 30)
+def draw_graph():
+    plt.figure(figsize=(8, 6))
+    
+    # Фиксируем позиции вершин, чтобы граф выглядел как на картинке
+    pos = {
+        'S': (0.5, 1.0),
+        'A': (0.2, 0.7), 'B': (0.5, 0.7), 'C': (0.8, 0.7),
+        'D': (0.2, 0.3), 'E': (0.5, 0.3), 'F': (0.8, 0.3),
+        'G': (0.5, 0.0)
+    }
+    
+    # Рисуем узлы и ребра
+    nx.draw(G, pos, with_labels=True, node_size=800, node_color='lightgray', 
+            font_size=12, font_weight='bold', edge_color='gray', width=2)
+    
+    # Подписываем веса ребер
+    edge_labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='red', font_size=10)
+    
+    plt.title("Задание 1. Граф (Рис.1)")
+    plt.axis('off') # Отключаем оси координат
+    plt.show()
 
 # ==========================================
-# 3. Уравнение для расчета собственных значений
+# 3. АЛГОРИТМ BFS (Поиск в ширину)
 # ==========================================
-lam = sp.symbols('lambda')
-L_sym = sp.Matrix(L)
-char_eq = L_sym.charpoly(lam)
-print("Уравнение для расчета собственных значений (det(L - lambda*I) = 0):")
-print(char_eq.as_expr(), "= 0")
-print("-" * 30)
+def bfs_shortest_paths(graph, start_node):
+    # Инициализируем словари для хранения путей и расстояний
+    # queue хранит кортежи (вершина, путь_до_нее, суммарное_расстояние)
+    queue = deque([(start_node, [start_node], 0)])
+    
+    # Множество посещенных вершин
+    visited = set([start_node])
+    
+    # Словарь для хранения результатов: {вершина: (путь, расстояние)}
+    results = {start_node: ([start_node], 0)}
+
+    while queue:
+        current_node, path, dist = queue.popleft()
+
+        # Перебираем всех соседей текущей вершины
+        for neighbor in graph.neighbors(current_node):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                
+                # Берем вес ребра (расстояние)
+                edge_weight = graph[current_node][neighbor]['weight']
+                new_dist = dist + edge_weight
+                new_path = path + [neighbor]
+                
+                # Записываем результат
+                results[neighbor] = (new_path, new_dist)
+                
+                # Добавляем в очередь
+                queue.append((neighbor, new_path, new_dist))
+                
+    return results
 
 # ==========================================
-# 4. Собственные значения и вектор Фидлера
+# 4. ВЫВОД ТАБЛИЦЫ РЕЗУЛЬТАТОВ
 # ==========================================
-eigenvalues, eigenvectors = np.linalg.eigh(L)
+def print_bfs_table(results):
+    print("\n" + "="*60)
+    print(f"{'Метод поиска в ширину (BFS) от вершины S':^60}")
+    print("="*60)
+    print(f"| {'Вершина':^8} | {'Путь (маршрут)':^26} | {'Расстояние':^10} |")
+    print("-" * 60)
+    
+    # Выводим вершины в алфавитном порядке (кроме S, которая первая)
+    order = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G']
+    
+    for node in order:
+        if node in results:
+            path, dist = results[node]
+            path_str = " -> ".join(path)
+            if node == 'S':
+                path_str = "S (старт)"
+            print(f"| {node:^8} | {path_str:^26} | {dist:^10} |")
+    print("="*60 + "\n")
 
-# Сортируем
-idx = np.argsort(eigenvalues)
-eigenvalues = eigenvalues[idx]
-eigenvectors = eigenvectors[:, idx]
-
-print("Собственные значения (отсортированы):")
-print(np.round(eigenvalues, 4))
-print("-" * 30)
-
-# Вектор Фидлера (второй столбец)
-fiedler_vector = eigenvectors[:, 1]
-print("Вектор Фидлера:")
-print(np.round(fiedler_vector, 4))
+# Запускаем программу
+if __name__ == "__main__":
+    # 1. Рисуем граф
+    draw_graph()
+    
+    # 2. Выполняем BFS от вершины S
+    bfs_results = bfs_shortest_paths(G, 'S')
+    
+    # 3. Выводим таблицу
+    print_bfs_table(bfs_results)
