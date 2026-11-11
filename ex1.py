@@ -11,14 +11,15 @@ nodes = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G']
 # Веса ребер по рис.1:
 # S-A: 1, S-B: 2, S-C: 3
 # A-D: 4, B-E: 5
+# C-F: 7 (исправлено)
 # D-G: 7
 # Остальные ребра (без цифр) принимаем за 1.
-# (C-F, F-G, E-G, D-G - здесь G-D уже 7, остальные по 1)
+# (F-G, E-G)
 
 edges = [
     ('S', 'A', 1), ('S', 'B', 2), ('S', 'C', 3),
     ('A', 'D', 4), ('B', 'E', 5),
-    ('C', 'F', 1), ('F', 'G', 1),
+    ('C', 'F', 7), ('F', 'G', 1), # C-F теперь 7
     ('E', 'G', 1), ('D', 'G', 7)
 ]
 
@@ -50,40 +51,29 @@ def draw_graph():
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='red', font_size=10)
     
     plt.title("Задание 1. Граф (Рис.1)")
-    plt.axis('off') # Отключаем оси координат
+    plt.axis('off')
     plt.show()
 
 # ==========================================
 # 3. АЛГОРИТМ BFS (Поиск в ширину)
 # ==========================================
 def bfs_shortest_paths(graph, start_node):
-    # Инициализируем словари для хранения путей и расстояний
-    # queue хранит кортежи (вершина, путь_до_нее, суммарное_расстояние)
+    # Очередь хранит кортежи (вершина, путь_до_нее, суммарное_расстояние)
     queue = deque([(start_node, [start_node], 0)])
-    
-    # Множество посещенных вершин
     visited = set([start_node])
-    
-    # Словарь для хранения результатов: {вершина: (путь, расстояние)}
     results = {start_node: ([start_node], 0)}
 
     while queue:
         current_node, path, dist = queue.popleft()
 
-        # Перебираем всех соседей текущей вершины
         for neighbor in graph.neighbors(current_node):
             if neighbor not in visited:
                 visited.add(neighbor)
-                
-                # Берем вес ребра (расстояние)
                 edge_weight = graph[current_node][neighbor]['weight']
                 new_dist = dist + edge_weight
                 new_path = path + [neighbor]
                 
-                # Записываем результат
                 results[neighbor] = (new_path, new_dist)
-                
-                # Добавляем в очередь
                 queue.append((neighbor, new_path, new_dist))
                 
     return results
@@ -98,7 +88,6 @@ def print_bfs_table(results):
     print(f"| {'Вершина':^8} | {'Путь (маршрут)':^26} | {'Расстояние':^10} |")
     print("-" * 60)
     
-    # Выводим вершины в алфавитном порядке (кроме S, которая первая)
     order = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G']
     
     for node in order:
@@ -112,11 +101,6 @@ def print_bfs_table(results):
 
 # Запускаем программу
 if __name__ == "__main__":
-    # 1. Рисуем граф
     draw_graph()
-    
-    # 2. Выполняем BFS от вершины S
     bfs_results = bfs_shortest_paths(G, 'S')
-    
-    # 3. Выводим таблицу
     print_bfs_table(bfs_results)
