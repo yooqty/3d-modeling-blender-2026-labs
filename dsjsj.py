@@ -1,56 +1,34 @@
 import sys
+from functools import lru_cache
 
 def main():
-    data = sys.stdin.read().split()
-    a = data[0]
-    n = len(a)
-    m = int(data[1])
-    tbl = str.maketrans("+-", "01")
+    n, k = map(int, sys.stdin.read().split())
 
-    # Distinct orthants as integers (first character = highest bit)
-    rows = set(int(s.translate(tbl), 2) for s in data[2:2 + m])
+    # state: sorted tuple of remaining column sums (column order doesn't matter)
+    @lru_cache(maxsize=None)
+    def f(state, rows_left):
+        if rows_left == 1:
+            # the last row is forced: sum of the remaining column sums equals K
+            return 1
+        total = 0
+        cur = [0] * n
 
-    # A nonempty monomial is positive in exactly half of the orthants.
-    # The constant 1 would be positive everywhere, but m < 2^n.
-    if len(rows) != 1 << (n - 1):
-        print("NO")
-        return
+        def dfs(j, left):
+            nonlocal total
+            if j == n:
+                if left == 0:
+                    new = tuple(sorted(state[i] - cur[i] for i in range(n)))
+                    total += f(new, rows_left - 1)
+                return
+            # the remaining columns must be able to absorb `left`
+            for x in range(min(state[j], left) + 1):
+                cur[j] = x
+                dfs(j + 1, left - x)
+            cur[j] = 0
 
-    # Gaussian elimination over GF(2): we look for S such that
-    # for every row x, parity(x & S) == 0
-    basis = {}  # pivot bit -> row (kept fully reduced)
-    for x in rows:
-        if len(basis) == n - 1:
-            break
-        for p, b in basis.items():
-            if (x >> p) & 1:
-                x ^= b
-        if x:
-            p = x.bit_length() - 1
-            for q in basis:
-                if (basis[q] >> p) & 1:
-                    basis[q] ^= x
-            basis[p] = x
+        dfs(0, k)
+        return total
 
-    if len(basis) != n - 1:
-        print("NO")
-        return
-
-    # Find the free column and build the solution vector S
-    free = next(i for i in range(n) if i not in basis)
-    S = 1 << free
-    for p, b in basis.items():
-        if (b >> free) & 1:
-            S |= 1 << p
-
-    # Verify all orthants
-    for x in rows:
-        if bin(x & S).count("1") & 1:
-            print("NO")
-            return
-
-    # Bit n-1-i corresponds to the i-th letter
-    res = [a[i] for i in range(n) if (S >> (n - 1 - i)) & 1]
-    print("".join(res))
+    print(f(tuple([k] * n), n))
 
 main()
