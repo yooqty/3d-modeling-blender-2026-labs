@@ -76,18 +76,21 @@ def bfs_path_search(adj_matrix, start_node, end_node):
 
 
 # ==========================================
-# ПОИСК В ГЛУБИНУ (DFS) - Стек
+# ПОИСК В ГЛУБИНУ (DFS) - Исправленный
 # ==========================================
 def dfs_path_search(adj_matrix, start_node, end_node):
     n = len(adj_matrix)
     
     visited = [False] * n
     parents = [None] * n
-    # В DFS расстояния не важны, но для порядка сохраним
     distances = [None] * n 
     
-    # Стек (LIFO). В методичке: добавляем справа, снимаем справа.
+    # Стек (LIFO). 
     stack = [start_node]
+    # Начальную вершину сразу помечаем, чтобы не добавить её повторно
+    # (в классическом DFS помечают при извлечении, но тогда возможны дубликаты в стеке)
+    visited[start_node] = True 
+    distances[start_node] = 0
     
     visited_list = []
     
@@ -114,14 +117,8 @@ def dfs_path_search(adj_matrix, start_node, end_node):
         print("-" * len(header))
         # ===================================
 
-        # Снимаем из стека СПРАВА
+        # Снимаем из стека СПРАВА (LIFO)
         current = stack.pop()
-        
-        # Если уже посещали (в стеке могли быть дубликаты), пропускаем
-        if visited[current]:
-            continue
-            
-        visited[current] = True
         visited_list.append(current)
         
         # Если дошли до цели
@@ -130,23 +127,14 @@ def dfs_path_search(adj_matrix, start_node, end_node):
             break
             
         # Перебираем соседей
-        # В методичке сказано: "В порядке убывания номеров" (чтобы меньшие оказались на вершине стека)
-        # Но для простоты пойдем по возрастанию, добавляя в стек.
-        # Чтобы имитировать поведение из PDF (где соседи идут по порядку), 
-        # пройдемся по соседям в обратном порядке, чтобы первый сосед оказался на вершине стека.
+        # Чтобы пойти вглубь по меньшим номерам, добавляем в стек в ОБРАТНОМ порядке (от большего к меньшему).
+        # Тогда на вершине стека окажется меньший номер.
         for neighbor in range(n - 1, -1, -1):
             if adj_matrix[current][neighbor] == 1 and not visited[neighbor]:
-                # Если соседа нет в стеке, добавляем
-                if neighbor not in stack:
-                    stack.append(neighbor)
-                    parents[neighbor] = current
-                    distances[neighbor] = distances[current] + 1 if distances[current] is not None else 1
-                else:
-                    # Если сосед уже в стеке, методичка говорит "передвигаем на вершину стека"
-                    # и "запоминаем нового родителя".
-                    stack.remove(neighbor)
-                    stack.append(neighbor)
-                    parents[neighbor] = current
+                stack.append(neighbor)
+                visited[neighbor] = True  # Помечаем сразу при добавлении
+                parents[neighbor] = current
+                distances[neighbor] = distances[current] + 1
         
         step += 1
 
