@@ -1,51 +1,48 @@
-def dfs_path(adj_matrix, start, end):
-    """
-    Находит путь с помощью поиска в глубину (DFS).
-    Использует стек (LIFO), как описано в лекции.
-    """
-    n = len(adj_matrix)
-    
-    # Стек для хранения вершин (добавляем справа, снимаем справа)
+def get_dfs_path_like_lecture(matrix, start, end):
+    n = len(matrix)
     stack = [start]
-    
-    # Множество посещенных вершин
     visited = set()
-    
-    # Список родителей для восстановления пути
     parents = [None] * n
 
-    while stack:
-        # Снимаем вершину с вершины стека (справа)
-        current = stack.pop()
+    # Имитируем логику из лекции:
+    # Мы добавляем соседей в стек, но если сосед уже в стеке,
+    # мы не добавляем его заново, а "поднимаем" (перемещаем в конец).
+    # Это влияет на порядок обхода.
 
-        # Если вершина уже посещена, пропускаем
+    while stack:
+        # Снимаем с вершины стека (справа)
+        current = stack.pop()
+        
+        # Если уже посещали - пропускаем
         if current in visited:
             continue
-            
+        
         visited.add(current)
 
-        # Если дошли до цели — останавливаемся
         if current == end:
             break
 
-        # Перебираем соседей
-        # ВАЖНО: Чтобы получить путь как в лекции (0315974), 
-        # нужно добавлять соседей в порядке возрастания номеров.
-        # Так как стек снимает последний элемент, первым обработается 
-        # сосед с наибольшим номером (например, 5 вместо 1).
+        # В лекции порядок добавления: перебираем соседей.
+        # Чтобы получить путь 0-3-1-5-9-7-4, нам нужно,
+        # чтобы при нахождении в вершине 1 (после 3), мы пошли сначала в 5, а не в 7.
+        # Для этого соседи добавляются в порядке возрастания (0,1,2...),
+        # но так как стек работает по принципу LIFO (последний пришел - первый ушел),
+        # мы добавляем их как есть. 
+        
         for neighbor in range(n):
-            if adj_matrix[current][neighbor] == 1 and neighbor not in visited:
-                # Если сосед еще не в стеке (или мы хотим обновить родителя)
-                # Для точного совпадения с лекцией (где родитель обновляется)
-                # просто добавляем в стек.
-                if neighbor not in stack:
-                    stack.append(neighbor)
-                    parents[neighbor] = current
+            if matrix[current][neighbor] == 1 and neighbor not in visited:
+                # Логика из лекции: если соседа нет в стеке - добавляем.
+                # Если есть - перемещаем в конец (обновляем родителя).
+                if neighbor in stack:
+                    stack.remove(neighbor)
+                
+                stack.append(neighbor)
+                parents[neighbor] = current
 
     # Восстановление пути
     if end not in visited:
         return None
-        
+
     path = []
     step = end
     while step is not None:
@@ -56,7 +53,7 @@ def dfs_path(adj_matrix, start, end):
     return path
 
 def main():
-    # Матрица смежности из задания (10 вершин: 0-9)
+    # Матрица смежности (изображение 3)
     matrix = [
         [0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # 0
         [0, 0, 1, 1, 0, 1, 0, 1, 0, 1], # 1
@@ -70,26 +67,31 @@ def main():
         [0, 1, 0, 0, 0, 1, 0, 1, 0, 0]  # 9
     ]
 
-    print("--- Задание 1 (DFS) ---")
+    print("--- Задание 1 (DFS по лекции) ---")
     
     try:
-        # Ввод данных
-        start_node = int(input("Введите номер начальной вершины: "))
-        end_node = int(input("Введите номер конечной вершины: "))
+        # Ввод данных с подсказками
+        start_str = input("Введите номер начальной вершины (например, 0): ")
+        end_str = input("Введите номер конечной вершины (например, 4): ")
+        
+        # Преобразование в числа
+        start = int(start_str)
+        end = int(end_str)
 
-        # Поиск пути
-        path = dfs_path(matrix, start_node, end_node)
+        # Получение пути
+        path = get_dfs_path_like_lecture(matrix, start, end)
 
-        # Вывод результата
         if path:
-            print(f"Путь из вершины {start_node} в вершину {end_node}:")
-            # Выводим слитно, как в тесте
-            print("".join(map(str, path)))
+            # Склеиваем цифры в строку без пробелов
+            result_string = "".join(map(str, path))
+            print(f"Путь из вершины {start} в вершину {end}: {result_string}")
         else:
             print("Путь не найден.")
-
+            
     except ValueError:
-        print("Ошибка: введите целые числа.")
+        print("Ошибка: нужно вводить целые числа.")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
 
 if __name__ == "__main__":
     main()
