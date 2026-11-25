@@ -3,7 +3,7 @@ from collections import deque
 def bfs_path_search(adj_matrix, start_node, end_node):
     n = len(adj_matrix)
     
-    # Инициализация структур данных (как на стр. 4 методички)
+    # Инициализация структур данных
     visited = [False] * n
     parents = [None] * n
     distances = [None] * n
@@ -15,35 +15,51 @@ def bfs_path_search(adj_matrix, start_node, end_node):
     visited[start_node] = True
     distances[start_node] = 0
     
-    # История посещений для вывода таблицы (доп. баллы)
-    visit_order = []
+    # Для красивого вывода таблиц
+    visited_list = [] 
     
     print(f"--- Начало поиска BFS: из {start_node} в {end_node} ---")
     
     step = 1
     while queue:
+        # === ВЫВОД ТАБЛИЦЫ ПЕРЕД ШАГОМ ===
+        print(f"\nШаг {step}")
+        print(f"{'queue':<10} | {' '.join(map(str, queue))}")
+        print(f"{'visited':<10} | {' '.join(map(str, visited_list))}")
+        
+        # Формируем строки для таблицы расстояний и родителей
+        header = f"{'вершина':<10} | " + " | ".join([f"{i:2}" for i in range(n)])
+        print("-" * len(header))
+        print(header)
+        
+        dist_row = f"{'distances':<10} | " + " | ".join([f"{d if d is not None else '-':>2}" for d in distances])
+        print(dist_row)
+        
+        parent_row = f"{'parents':<10} | " + " | ".join([f"{p if p is not None else '-':>2}" for p in parents])
+        print(parent_row)
+        print("-" * len(header))
+        # ===================================
+
         # Снимаем из очереди СЛЕВА (FIFO)
         current = queue.popleft()
-        visit_order.append(current)
         
-        # Если дошли до цели, можем остановиться (или продолжить, чтобы заполнить таблицу полностью)
+        # Если дошли до цели, можем остановиться
         if current == end_node:
-            print(f"Цель {end_node} найдена на шаге {step}!")
+            visited_list.append(current)
+            print(f"\nЦель {end_node} найдена на шаге {step}!")
             break
             
         # Перебираем соседей
         for neighbor in range(n):
             # Если есть ребро (1) и сосед не посещен
             if adj_matrix[current][neighbor] == 1 and not visited[neighbor]:
-                # Добавляем в очередь СПРАВА
                 queue.append(neighbor)
-                # Помечаем как посещенного
                 visited[neighbor] = True
-                # Запоминаем родителя
                 parents[neighbor] = current
-                # Обновляем расстояние
                 distances[neighbor] = distances[current] + 1
         
+        # Добавляем текущую вершину в список посещенных (для вывода)
+        visited_list.append(current)
         step += 1
 
     # --- Восстановление пути ---
@@ -51,42 +67,23 @@ def bfs_path_search(adj_matrix, start_node, end_node):
         print(f"Путь из {start_node} в {end_node} не существует.")
         return
 
-    # Идем от конца к началу по родителям
     path = []
     curr = end_node
     while curr is not None:
         path.append(curr)
         curr = parents[curr]
     
-    # Переворачиваем путь (от начала к концу)
     path.reverse()
     
-    # --- Вывод результатов (как на стр. 6-9) ---
     print("\n" + "="*40)
-    print("ТАБЛИЦА ПОСЕЩЕННЫХ ВЕРШИН (Queue & Visited)")
-    print(f"Порядок извлечения из очереди: {visit_order}")
-    
-    print("\nТАБЛИЦА РАССТОЯНИЙ И РОДИТЕЛЕЙ:")
-    header = "Вершина | " + " | ".join([str(i) for i in range(n)])
-    print("-" * len(header))
-    print(header)
-    
-    dist_str = "Дистан | " + " | ".join([str(d) if d is not None else "-" for d in distances])
-    print(dist_str)
-    
-    parent_str = "Родитель| " + " | ".join([str(p) if p is not None else "-" for p in parents])
-    print(parent_str)
-    print("="*40)
-
-    print(f"\nКратчайший путь (по ребрам): {' -> '.join(map(str, path))}")
+    print(f"Кратчайший путь (по ребрам): {' -> '.join(map(str, path))}")
     print(f"Длина пути: {distances[end_node]} ребер.")
+    print("="*40)
 
 # ==========================================
 # 1. Ввод данных (согласно вашему примеру)
 # ==========================================
 
-# Матрица смежности из задания (10x10)
-# 0 - нет ребра, 1 - есть ребро
 adjacency_matrix = [
     [0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # 0
     [0, 0, 1, 1, 0, 1, 1, 1, 0, 0], # 1
