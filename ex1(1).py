@@ -1,44 +1,62 @@
-def dfs_path_with_stack(adj_matrix, start, end):
+def dfs_path(adj_matrix, start, end):
     """
-    Поиск пути с помощью стека (DFS).
-    Порядок добавления в стек подобран так, чтобы воспроизвести путь из теста.
+    Находит путь с помощью поиска в глубину (DFS).
+    Использует стек (LIFO), как описано в лекции.
     """
     n = len(adj_matrix)
     
-    # Стек хранит кортежи (текущая_вершина, путь_до_неё)
-    # Начинаем со стартовой вершины
-    stack = [(start, [start])]
+    # Стек для хранения вершин (добавляем справа, снимаем справа)
+    stack = [start]
     
     # Множество посещенных вершин
     visited = set()
+    
+    # Список родителей для восстановления пути
+    parents = [None] * n
 
     while stack:
-        # Снимаем с вершины стека (LIFO - последний пришел, первый вышел)
-        current, path = stack.pop()
+        # Снимаем вершину с вершины стека (справа)
+        current = stack.pop()
 
         # Если вершина уже посещена, пропускаем
         if current in visited:
             continue
-
-        # Помечаем как посещенную
+            
         visited.add(current)
 
-        # Если дошли до цели - возвращаем путь
+        # Если дошли до цели — останавливаемся
         if current == end:
-            return path
+            break
 
         # Перебираем соседей
-        # В лекции (стр. 11) сказано: "В порядке убывания номеров"
-        # Поэтому мы идем от последнего индекса к первому
-        for neighbor in range(n - 1, -1, -1):
+        # ВАЖНО: Чтобы получить путь как в лекции (0315974), 
+        # нужно добавлять соседей в порядке возрастания номеров.
+        # Так как стек снимает последний элемент, первым обработается 
+        # сосед с наибольшим номером (например, 5 вместо 1).
+        for neighbor in range(n):
             if adj_matrix[current][neighbor] == 1 and neighbor not in visited:
-                # Добавляем соседа в стек вместе с новым путем
-                stack.append((neighbor, path + [neighbor]))
-                
-    return None
+                # Если сосед еще не в стеке (или мы хотим обновить родителя)
+                # Для точного совпадения с лекцией (где родитель обновляется)
+                # просто добавляем в стек.
+                if neighbor not in stack:
+                    stack.append(neighbor)
+                    parents[neighbor] = current
+
+    # Восстановление пути
+    if end not in visited:
+        return None
+        
+    path = []
+    step = end
+    while step is not None:
+        path.append(step)
+        step = parents[step]
+    
+    path.reverse()
+    return path
 
 def main():
-    # Матрица смежности из лекции
+    # Матрица смежности из задания (10 вершин: 0-9)
     matrix = [
         [0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # 0
         [0, 0, 1, 1, 0, 1, 0, 1, 0, 1], # 1
@@ -55,11 +73,14 @@ def main():
     print("--- Задание 1 (DFS) ---")
     
     try:
+        # Ввод данных
         start_node = int(input("Введите номер начальной вершины: "))
         end_node = int(input("Введите номер конечной вершины: "))
 
-        path = dfs_path_with_stack(matrix, start_node, end_node)
+        # Поиск пути
+        path = dfs_path(matrix, start_node, end_node)
 
+        # Вывод результата
         if path:
             print(f"Путь из вершины {start_node} в вершину {end_node}:")
             # Выводим слитно, как в тесте
