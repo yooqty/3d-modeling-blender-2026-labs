@@ -1,68 +1,90 @@
+import sys
 from collections import deque
 import networkx as nx
 import matplotlib.pyplot as plt
 
-def bfs_shortest_path(adj_matrix, start, end):
-    """
-    Находит кратчайший путь (по количеству ребер) с помощью BFS.
-    """
-    n = len(adj_matrix)
+# Матрица смежности для графа из лекции (10 вершин: 0-9)
+MATRIX = [
+    [0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # 0
+    [0, 0, 1, 1, 0, 1, 1, 1, 0, 0], # 1
+    [0, 1, 0, 1, 0, 0, 0, 0, 1, 0], # 2
+    [1, 1, 1, 0, 0, 1, 0, 0, 1, 0], # 3
+    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0], # 4
+    [1, 1, 0, 1, 0, 0, 1, 0, 0, 1], # 5
+    [0, 1, 0, 0, 0, 1, 0, 0, 0, 0], # 6
+    [0, 1, 0, 0, 1, 0, 0, 0, 0, 1], # 7
+    [0, 0, 1, 1, 0, 0, 0, 0, 0, 0], # 8
+    [0, 0, 0, 0, 0, 1, 0, 1, 0, 0]  # 9
+]
+
+def bfs_path(matrix, start, end):
+    """Поиск в ширину (BFS). Находит кратчайший путь по количеству ребер."""
+    n = len(matrix)
+    queue = deque([(start, [start])])
+    visited = set([start])
     
-    if start < 0 or start >= n or end < 0 or end >= n:
-        return None
-
-    queue = deque([start])
-    visited = [False] * n
-    visited[start] = True
-    parents = [None] * n
-
     while queue:
-        current = queue.popleft()
+        current, path = queue.popleft()
+        
         if current == end:
-            break
-
+            return path
+        
         for neighbor in range(n):
-            if adj_matrix[current][neighbor] == 1 and not visited[neighbor]:
-                visited[neighbor] = True
-                parents[neighbor] = current
-                queue.append(neighbor)
+            if matrix[current][neighbor] == 1 and neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, path + [neighbor]))
+                
+    return None
 
-    if not visited[end]:
-        return None
-    
-    path = []
-    step = end
-    while step is not None:
-        path.append(step)
-        step = parents[step]
-    
-    path.reverse()
-    return path
-
-def draw_graph(adj_matrix, path):
+def dfs_path(matrix, start, end):
     """
-    Рисует граф и выделяет найденный путь.
+    Поиск в глубину (DFS).
+    Чтобы получить путь 0315974, мы добавляем соседей в порядке убывания,
+    тогда первым из стека выйдет сосед с наименьшим номером.
     """
-    # Создаем граф из матрицы смежности
-    G = nx.from_numpy_array(adj_matrix) if hasattr(adj_matrix, 'shape') else nx.Graph()
+    n = len(matrix)
+    stack = [(start, [start])]
+    visited = set()
     
-    # Если матрица задана списком списков, строим граф вручную
-    if not hasattr(adj_matrix, 'shape'):
-        G = nx.Graph()
-        n = len(adj_matrix)
-        G.add_nodes_from(range(n))
-        for i in range(n):
-            for j in range(i + 1, n):
-                if adj_matrix[i][j] == 1:
-                    G.add_edge(i, j)
+    while stack:
+        current, path = stack.pop()
+        
+        if current in visited:
+            continue
+            
+        visited.add(current)
+        
+        if current == end:
+            return path
+        
+        neighbors = [i for i in range(n) if matrix[current][i] == 1]
+        
+        # Добавляем в стек в обратном порядке (чтобы наименьший номер был на вершине)
+        for neighbor in sorted(neighbors, reverse=True):
+            if neighbor not in visited:
+                stack.append((neighbor, path + [neighbor]))
+                
+    return None
 
-    # Задаем координаты вершин (чтобы граф выглядел как на картинке из лекции)
-    # Эти координаты подобраны примерно под структуру графа из PDF
+def draw_graph(matrix, path, title):
+    """Отрисовка графа с выделением найденного пути."""
+    G = nx.Graph()
+    n = len(matrix)
+    
+    G.add_nodes_from(range(n))
+    
+    # Добавляем ребра
+    for i in range(n):
+        for j in range(i + 1, n):
+            if matrix[i][j] == 1:
+                G.add_edge(i, j)
+    
+    # Жестко заданные координаты (чтобы граф выглядел как на картинке в PDF)
     pos = {
-        0: (10, 5),    # Красная вершина справа
+        0: (10, 5),    # Красная вершина (цель)
         1: (3, 6),     # Центральная левая
         2: (4, 9),     # Верхняя левая
-        3: (7, 8.5),   # Верхняя правая (с плюсом)
+        3: (7, 8.5),   # Верхняя правая
         4: (-2, 2),    # Самая левая нижняя
         5: (5, 4),     # Центральная нижняя
         6: (4.5, 1.5), # Нижняя
@@ -73,63 +95,67 @@ def draw_graph(adj_matrix, path):
 
     plt.figure(figsize=(10, 7))
     
-    # Рисуем все вершины и ребра (по умолчанию)
-    nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=500)
+    # Рисуем весь граф
+    nx.draw_networkx_nodes(G, pos, node_color='lightgray', node_size=500)
     nx.draw_networkx_edges(G, pos, edge_color='gray', width=1.5)
     nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
-
-    # Выделяем найденный путь
+    
+    # Выделяем путь красным цветом
     if path:
-        # Создаем список ребер для пути
         path_edges = list(zip(path, path[1:]))
-        
-        # Рисуем ребра пути красным цветом и потолще
+        nx.draw_networkx_nodes(G, pos, nodelist=path, node_color='red', node_size=600)
         nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='red', width=3)
         
-        # Выделяем вершины пути
-        nx.draw_networkx_nodes(G, pos, nodelist=path, node_color='salmon', node_size=600)
-        
-        # Подписываем вершины пути их порядковым номером в маршруте (опционально)
-        # nx.draw_networkx_labels(G, pos, labels={node: f"{node}" for node in path}, font_color='black')
-
-    plt.title("Визуализация графа и найденного пути (BFS)")
-    plt.axis('off') # Отключаем оси координат
+    plt.title(title, fontsize=14)
+    plt.axis('off')
     plt.show()
 
+def get_valid_input(prompt, max_val):
+    """Вспомогательная функция для корректного ввода вершин."""
+    while True:
+        try:
+            val = int(input(prompt).strip())
+            if 0 <= val < max_val:
+                return val
+            else:
+                print(f"Ошибка: вершина должна быть в диапазоне от 0 до {max_val - 1}.")
+        except ValueError:
+            print("Ошибка: пожалуйста, введите целое число.")
+
 def main():
-    # Матрица смежности для графа из задания (10 вершин: 0-9)
-    matrix = [
-        [0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-        [0, 0, 1, 1, 0, 1, 0, 1, 0, 1],
-        [0, 1, 0, 1, 0, 0, 0, 0, 1, 0],
-        [1, 1, 1, 0, 0, 1, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-        [1, 1, 0, 1, 0, 0, 1, 0, 0, 1],
-        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-        [0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
-        [0, 0, 1, 1, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0, 1, 0, 1, 0, 0]
-    ]
-
-    print("--- Задание 1 ---")
+    n = len(MATRIX)
+    print("="*40)
+    print("ЗАДАНИЕ 1: ПОИСК ПУТИ В ГРАФЕ")
+    print("="*40)
     
-    try:
-        start_node = int(input("Введите номер начальной вершины (например, 0): "))
-        end_node = int(input("Введите номер конечной вершины (например, 4): "))
+    # Ввод данных
+    start_node = get_valid_input("Введите номер начальной вершины (0-9): ", n)
+    end_node = get_valid_input("Введите номер конечной вершины (0-9): ", n)
 
-        path = bfs_shortest_path(matrix, start_node, end_node)
+    print("\n--- РЕЗУЛЬТАТЫ ---")
 
-        if path:
-            print(f"Путь из вершины {start_node} в вершину {end_node}:")
-            print("".join(map(str, path)))
-            
-            # Вызов функции отрисовки
-            draw_graph(matrix, path)
-        else:
-            print("Путь не найден.")
+    # BFS
+    path_bfs = bfs_path(MATRIX, start_node, end_node)
+    if path_bfs:
+        bfs_str = "".join(map(str, path_bfs))
+        print(f"Путь BFS (кратчайший): {bfs_str}")
+    else:
+        print("BFS: Путь не найден.")
 
-    except ValueError:
-        print("Ошибка: введите целые числа.")
+    # DFS
+    path_dfs = dfs_path(MATRIX, start_node, end_node)
+    if path_dfs:
+        dfs_str = "".join(map(str, path_dfs))
+        print(f"Путь DFS (глубокий):   {dfs_str}")
+    else:
+        print("DFS: Путь не найден.")
+
+    # Отрисовка графиков
+    if path_bfs:
+        draw_graph(MATRIX, path_bfs, f"Поиск в ширину (BFS): путь {bfs_str}")
+    if path_dfs and path_bfs != path_dfs:
+        # Показываем второй график, только если пути отличаются
+        draw_graph(MATRIX, path_dfs, f"Поиск в глубину (DFS): путь {dfs_str}")
 
 if __name__ == "__main__":
     main()
